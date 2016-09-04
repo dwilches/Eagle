@@ -1,12 +1,14 @@
 # Eagle
-Public Eagle files: some devices/symbols and a plugin.
+Public Eagle files: some devices and plugins.
 
 ## ULPs
 
-OSHPark_Cost_Estimator
+- **OSHPark_Cost_Estimator**<br>
 Calculates the cost of fabricating a PCB with OSHPark
 
-## Devices in the Eagle LBR
+## LBRs
+
+The library DWM.lbr contains the following symbols with their respective packages:
 
 | Schematic Symbol | Description |
 | :---: | --- |
