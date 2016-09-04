@@ -1,0 +1,140 @@
+
+#usage "<b>Calculates the cost of fabricating a PCB with OSHPark</b><br><br>"
+       "<b>Usage:</b> RUN OSHPark_Cost_Estimator.ulp<br><br>"
+       "<b>Author:</b> <a href='www.dwilches.com'>Daniel Wilches</a> (dwilches@gmail.com)"
+
+
+//=============================================================================
+// Constants and variables
+//=============================================================================
+real CONSTANT_SCALE = 8128000;
+real PRICE_PER_SQUARE_INCH = 5;
+
+// After iterating over the wires, the width and height of the board are stored
+// in these variables.
+real width;
+real height;
+
+
+//=============================================================================
+// Validations
+//=============================================================================
+
+// This ULP must be run in a BOARD (not SCHEMATIC nor LIBRARY).
+if (!board)
+{
+    dlgMessageBox("This ULP must be run in a board.");
+    exit(EXIT_FAILURE);
+}
+
+
+//=============================================================================
+// Board's bounding box calculation
+//=============================================================================
+
+board(B)
+{
+    // While iterating over the wires, we'll store in these variables the size of
+    // the current bounding box.
+    int min_x, min_y, max_x, max_y;
+    // To deterine if we have at least one wire we will use this int variable (as a
+    // bool).
+    int first_wire = 1;
+
+    // Traverse over all the wires of the current board.
+    B.wires(W)
+    {
+        // Only work over wires that are in the Dimension layer
+        if (W.layer != LAYER_DIMENSION)
+            continue;
+        
+        // On the first wire, initializa the value of the bounding box to be
+        // around this wire.
+        if (first_wire == 1)
+        {
+            min_x = min(W.x1, W.x2);
+            max_x = max(W.x1, W.x2);
+            
+            min_y = min(W.y1, W.y2);
+            max_y = max(W.y1, W.y2);
+            
+            first_wire = 0;
+        }
+        // Check if the other wires lie outside of the bounding box, and update
+        // the bounding box accordingly.
+        else
+        {
+            if (W.x1 < min_x) min_x = W.x1;
+            if (W.x2 < min_x) min_x = W.x2;
+            if (W.x1 > max_x) max_x = W.x1;
+            if (W.x2 > max_x) max_x = W.x2;
+            
+            if (W.y1 < min_y) min_y = W.y1;
+            if (W.y2 < min_y) min_y = W.y2;
+            if (W.y1 > max_y) max_y = W.y1;
+            if (W.y2 > max_y) max_y = W.y2;
+        }
+        
+    }
+    
+    // If we didn't see any wire in the dimension layer, reject to run the
+    // cost estimate
+    if (first_wire == 1)
+    {
+        dlgMessageBox("This board doesn't define any wire in the Dimension layer.");
+        exit(EXIT_FAILURE);
+    }
+        
+    // Calculate the width and height of the bounding box, that's all that
+    // matters
+    width = (max_x - min_x) / CONSTANT_SCALE;
+    height = (max_y - min_y) / CONSTANT_SCALE;
+};
+
+
+//=============================================================================
+// Show the results of the analysis
+//=============================================================================
+
+dlgDialog("OSHPark cost estimator")
+{
+    // Indirectly sets the size of the dialog.
+    dlgHBoxLayout dlgSpacing(250);
+    
+    dlgGroup("Board's dimensions")
+    {
+        dlgGridLayout
+        {
+            dlgCell(0, 0) dlgLabel("Width:");
+            dlgCell(1, 0) dlgLabel("Height:");
+            
+            string tmp;
+            sprintf(tmp, "%0.2f inches", width);
+            dlgCell(0, 1) dlgLabel(tmp);
+            sprintf(tmp, "%0.2f inches", height);
+            dlgCell(1, 1) dlgLabel(tmp);
+        };
+    };
+    
+    dlgGroup("Price estimate")
+    {
+        dlgGridLayout
+        {
+            dlgCell(0, 0) dlgLabel("Price per square inch:");
+            dlgCell(1, 0) dlgLabel("Total cost of this board:");
+            
+            string tmp;
+            sprintf(tmp, "$ %0.2f", PRICE_PER_SQUARE_INCH);
+            dlgCell(0, 1) dlgLabel(tmp);
+            
+            sprintf(tmp, "$ %0.2f", width * height * PRICE_PER_SQUARE_INCH);
+            dlgCell(1, 1) dlgLabel(tmp);
+        }
+    }
+
+    dlgHBoxLayout
+    {
+        dlgPushButton("+&Close") dlgAccept(2);
+    }
+    
+};
